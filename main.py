@@ -199,11 +199,13 @@ while True:
             balls.append(create_ball())
 
         # Dibujo de elementos en pantalla
+        color_barra = (255, 0, 0)
         screen.fill(bg_color)
-        pygame.draw.rect(screen, light_grey, player)
-        pygame.draw.rect(screen, light_grey, opponent)
+        pygame.draw.rect(screen, color_barra, player)
+        pygame.draw.rect(screen, color_barra, opponent)
+        color_bola = (255, 255, 0)
         for ball in balls:
-            pygame.draw.ellipse(screen, light_grey, ball['rect'])
+            pygame.draw.ellipse(screen, color_bola, ball['rect'])
         pygame.draw.aaline(screen, light_grey, (screen_width / 2, 0),
                            (screen_width / 2, screen_height))
         score_text = font_medium.render(f"{opponent_score}  -  {player_score}", True, light_grey)
