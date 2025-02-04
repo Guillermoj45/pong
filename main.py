@@ -10,6 +10,9 @@ screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Pong")
 clock = pygame.time.Clock()  # Define el reloj localmente
 
+# Configuración de la fuente para el marcador
+font = pygame.font.Font(None, 74)  # Fuente por defecto de tamaño 74
+
 # Variables del juego
 ball = pygame.Rect(screen_width/2 - 15, screen_height/2 - 15, 30, 30)
 player = pygame.Rect(screen_width - 20, screen_height/2 - 70, 10, 140)
@@ -22,6 +25,10 @@ ball_speed_x = 7 * random.choice((1, -1))
 ball_speed_y = 7 * random.choice((1, -1))
 player_speed = 0  # Velocidad del jugador
 opponent_speed = 7
+
+# Variables para el contador de puntuación
+player_score = 0      # Puntuación del jugador (lado derecho)
+opponent_score = 0    # Puntuación del oponente (lado izquierdo)
 
 while True:
     for event in pygame.event.get():
@@ -39,7 +46,7 @@ while True:
             if event.key == pygame.K_UP:
                 player_speed += 7
 
-    # Movimiento de la bola
+    # Movimiento de la bola y la pala del jugador
     ball.x += ball_speed_x
     ball.y += ball_speed_y
     player.y += player_speed
@@ -56,9 +63,16 @@ while True:
 
     # Colisión con los bordes izquierdo y derecho
     if ball.left <= 0 or ball.right >= screen_width:
-        # Aviso si toca la pared enemiga (lado izquierdo)
+        # Actualización de la puntuación según el borde tocado:
         if ball.left <= 0:
-            print("La bola ha tocado la pared enemiga.")
+            # La bola tocó la pared enemiga (lado izquierdo), se le otorga punto al jugador (lado derecho)
+            player_score += 1
+            print("La bola ha tocado la pared enemiga. Punto para el jugador.")
+        if ball.right >= screen_width:
+            # La bola tocó la pared del jugador, se le otorga punto al oponente (lado izquierdo)
+            opponent_score += 1
+            print("La bola ha tocado la pared del jugador. Punto para el oponente.")
+
         # Reinicia la bola en el centro y se asignan nuevas direcciones aleatorias
         ball.center = (screen_width/2, screen_height/2)
         ball_speed_y *= random.choice((1, -1))
@@ -84,6 +98,11 @@ while True:
     pygame.draw.rect(screen, light_grey, opponent)
     pygame.draw.ellipse(screen, light_grey, ball)
     pygame.draw.aaline(screen, light_grey, (screen_width/2, 0), (screen_width/2, screen_height))
+
+    # Renderizado y visualización del marcador
+    score_text = font.render(f"{opponent_score}  -  {player_score}", True, light_grey)
+    score_rect = score_text.get_rect(center=(screen_width/2, 30))
+    screen.blit(score_text, score_rect)
 
     pygame.display.flip()
     clock.tick(60)
