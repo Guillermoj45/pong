@@ -22,7 +22,6 @@ state = 'menu'
 opponent_type = 'IA'  # Valor por defecto
 
 # Botones en el menú principal
-# Se han incrementado las dimensiones del botón "Seleccionar Oponente" para que el texto se visualice por completo.
 btn_select = pygame.Rect(screen_width // 2 - 200, screen_height // 2 - 100, 400, 80)
 btn_exit = pygame.Rect(screen_width // 2 - 150, screen_height // 2 + 20, 300, 60)
 
@@ -39,23 +38,29 @@ def draw_button(rect, text):
     screen.blit(text_surface, text_rect)
 
 
-# Variables del juego (se inicializan cuando se empieza la partida)
+# Función para crear una nueva bola
+def create_ball():
+    return {
+        'rect': pygame.Rect(screen_width / 2 - 15, screen_height / 2 - 15, 30, 30),
+        'speed_x': 7 * random.choice((1, -1)),
+        'speed_y': 7 * random.choice((1, -1))
+    }
+
+
+# Función de inicialización del juego
 def init_game():
-    global ball, player, opponent, ball_speed_x, ball_speed_y, player_speed, opponent_speed, player_score, opponent_score
-    ball = pygame.Rect(screen_width / 2 - 15, screen_height / 2 - 15, 30, 30)
+    global balls, player, opponent, player_speed, opponent_speed, player_score, opponent_score
+    balls = [create_ball()]  # Se inicia con una bola
     player = pygame.Rect(screen_width - 20, screen_height / 2 - 70, 10, 140)
     opponent = pygame.Rect(10, screen_height / 2 - 70, 10, 140)  # Pala del oponente
-    ball_speed_x = 7 * random.choice((1, -1))
-    ball_speed_y = 7 * random.choice((1, -1))
     player_speed = 0  # Velocidad del jugador (lado derecho)
     opponent_speed = 7
     player_score = 0  # Puntuación del jugador (lado derecho)
     opponent_score = 0  # Puntuación del oponente (lado izquierdo)
-    return player_score, opponent_score
 
 
-# Variables de puntuación (inicializadas al comenzar la partida)
-player_score, opponent_score = 0, 0
+# Inicialización de variables de juego
+init_game()
 
 # Bucle principal del programa
 while True:
@@ -65,7 +70,6 @@ while True:
             pygame.quit()
             sys.exit()
 
-        # Procesamiento de eventos según el estado actual
         if state == 'menu':
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if btn_select.collidepoint(event.pos):
@@ -77,12 +81,11 @@ while True:
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if btn_ia.collidepoint(event.pos):
                     opponent_type = 'IA'
-                    # Se inicializan las variables del juego y se cambia al estado 'game'
-                    player_score, opponent_score = init_game()
+                    init_game()
                     state = 'game'
                 elif btn_player.collidepoint(event.pos):
                     opponent_type = 'player'
-                    player_score, opponent_score = init_game()
+                    init_game()
                     state = 'game'
         elif state == 'game':
             # Eventos de teclado para controlar la pala del jugador (lado derecho)
@@ -105,9 +108,7 @@ while True:
         title_rect = title_surface.get_rect(center=(screen_width // 2, screen_height // 4))
         screen.blit(title_surface, title_rect)
 
-        # Botón para seleccionar el tipo de oponente (ahora con mayor tamaño)
         draw_button(btn_select, "Seleccionar Oponente")
-        # Botón para salir de la aplicación
         draw_button(btn_exit, "Salir")
 
     elif state == 'select':
@@ -121,16 +122,50 @@ while True:
         draw_button(btn_player, "Jugador")
 
     elif state == 'game':
-        # Actualización de la lógica del juego Pong
-        ball.x += ball_speed_x
-        ball.y += ball_speed_y
-        player.y += player_speed
+        # Actualización de la lógica del juego Pong para cada bola
+        for ball in balls:
+            ball['rect'].x += ball['speed_x']
+            ball['rect'].y += ball['speed_y']
 
-        # Movimiento de la pala del oponente según el tipo seleccionado
+            # Colisión con la parte superior e inferior
+            if ball['rect'].top <= 0 or ball['rect'].bottom >= screen_height:
+                ball['speed_y'] *= -1
+
+            # Colisión con los bordes izquierdo y derecho y actualización de puntuación
+            if ball['rect'].left <= 0 or ball['rect'].right >= screen_width:
+                if ball['rect'].left <= 0:
+                    # La bola tocó la pared enemiga (lado izquierdo): punto para el jugador (lado derecho)
+                    player_score += 1
+
+                if ball['rect'].right >= screen_width:
+                    # La bola tocó la pared del jugador: punto para el oponente (lado izquierdo)
+                    opponent_score += 1
+
+                # Reiniciar la bola en el centro con nuevas direcciones aleatorias
+                ball['rect'].center = (screen_width / 2, screen_height / 2)
+                ball['speed_x'] = 7 * random.choice((1, -1))
+                ball['speed_y'] = 7 * random.choice((1, -1))
+
+            # Colisiones con las palas:
+            # Si la bola colisiona con la pala del jugador (lado derecho), se asegura que se mueva hacia la izquierda.
+            if ball['rect'].colliderect(player):
+                ball['speed_x'] = -abs(ball['speed_x'])
+            # Si la bola colisiona con la pala del oponente (lado izquierdo), se asegura que se mueva hacia la derecha.
+            if ball['rect'].colliderect(opponent):
+                ball['speed_x'] = abs(ball['speed_x'])
+
+        # Actualización del jugador y del oponente
+        player.y += player_speed
+        if player.top < 0:
+            player.top = 0
+        if player.bottom > screen_height:
+            player.bottom = screen_height
+
+        # Movimiento del oponente según el tipo seleccionado
         if opponent_type == 'IA':
-            if opponent.top < ball.y:
+            if opponent.top < balls[0]['rect'].y:
                 opponent.top += opponent_speed
-            if opponent.bottom > ball.y:
+            if opponent.bottom > balls[0]['rect'].y:
                 opponent.bottom -= opponent_speed
         else:  # Control manual para el jugador oponente
             keys = pygame.key.get_pressed()
@@ -138,52 +173,23 @@ while True:
                 opponent.y -= opponent_speed
             if keys[pygame.K_s]:
                 opponent.y += opponent_speed
-
-        # Límites para la pala del jugador (lado derecho)
-        if player.top <= 0:
-            player.top = 0
-        if player.bottom >= screen_height:
-            player.bottom = screen_height
-
-        # Límites para la pala del oponente
-        if opponent.top <= 0:
+        if opponent.top < 0:
             opponent.top = 0
-        if opponent.bottom >= screen_height:
+        if opponent.bottom > screen_height:
             opponent.bottom = screen_height
 
-        # Colisión de la bola con la parte superior e inferior
-        if ball.top <= 0 or ball.bottom >= screen_height:
-            ball_speed_y *= -1
+        # Comprobación para añadir una bola extra cada 10 puntos totales
+        total_points = player_score + opponent_score
+        if total_points // 10 + 1 > len(balls):
+            balls.append(create_ball())
 
-        # Colisión con los bordes izquierdo y derecho
-        if ball.left <= 0 or ball.right >= screen_width:
-            # Actualización de la puntuación según el borde tocado:
-            if ball.left <= 0:
-                # La bola tocó la pared enemiga (lado izquierdo), se otorga punto al jugador (lado derecho)
-                player_score += 1
-                print("La bola ha tocado la pared enemiga. Punto para el jugador.")
-            if ball.right >= screen_width:
-                # La bola tocó la pared del jugador, se otorga punto al oponente (lado izquierdo)
-                opponent_score += 1
-                print("La bola ha tocado la pared del jugador. Punto para el oponente.")
-
-            # Reiniciar la bola en el centro y asignar nuevas direcciones aleatorias
-            ball.center = (screen_width / 2, screen_height / 2)
-            ball_speed_y *= random.choice((1, -1))
-            ball_speed_x *= random.choice((1, -1))
-
-        # Colisión de la bola con las palas
-        if ball.colliderect(player) or ball.colliderect(opponent):
-            ball_speed_x *= -1
-
-        # Visualización de la partida
+        # Dibujo de elementos en pantalla
         screen.fill(bg_color)
         pygame.draw.rect(screen, light_grey, player)
         pygame.draw.rect(screen, light_grey, opponent)
-        pygame.draw.ellipse(screen, light_grey, ball)
+        for ball in balls:
+            pygame.draw.ellipse(screen, light_grey, ball['rect'])
         pygame.draw.aaline(screen, light_grey, (screen_width / 2, 0), (screen_width / 2, screen_height))
-
-        # Visualización del marcador
         score_text = font_medium.render(f"{opponent_score}  -  {player_score}", True, light_grey)
         score_rect = score_text.get_rect(center=(screen_width / 2, 30))
         screen.blit(score_text, score_rect)
