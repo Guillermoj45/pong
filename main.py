@@ -3,9 +3,9 @@ import pygame, sys, random
 # Inicialización de Pygame y constantes globales
 pygame.init()
 
-# ===============================
+
 # CONSTANTES Y CONFIGURACIONES
-# ===============================
+
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 760
 FPS = 60
@@ -71,20 +71,22 @@ powerup_next_spawn = pygame.time.get_ticks() + random.randint(5000, 10000)
 
 
 # VARIABLES DE ENLARGAMIENTO TEMPORAL DE PALAS
+
 player_enlarged_until = 0
 opponent_enlarged_until = 0
 
 
 # FUNCIONES AUXILIARES
+
 def draw_button(rect, text):
-    """Dibuja un botón con borde redondeado y centra el texto."""
+    # Dibuja un botón con borde redondeado y centra el texto.
     pygame.draw.rect(screen, LIGHT_GREY, rect, border_radius=5)
     text_surface = font_medium.render(text, True, BG_COLOR)
     text_rect = text_surface.get_rect(center=rect.center)
     screen.blit(text_surface, text_rect)
 
 def create_ball():
-    """Crea y devuelve un diccionario que representa una bola con posición y velocidad aleatoria."""
+    # Crea y devuelve un diccionario que representa una bola con posición y velocidad aleatoria.
     return {
         'rect': pygame.Rect(SCREEN_WIDTH / 2 - 15, SCREEN_HEIGHT / 2 - 15, 30, 30),
         'speed_x': 7 * random.choice((1, -1)),
@@ -92,18 +94,18 @@ def create_ball():
     }
 
 def spawn_powerup():
-    """Genera un power-up en una posición aleatoria."""
+    # Genera un power-up en una posición aleatoria.
     size = 20
     x = random.randint(SCREEN_WIDTH // 4, SCREEN_WIDTH * 3 // 4)
     y = random.randint(50, SCREEN_HEIGHT - 50)
-    # El power-up se representa con un rectángulo (podría ser una imagen)
+    # El power-up se representa con un rectángulo (se dibujará como círculo)
     return {
         'rect': pygame.Rect(x, y, size, size),
         'spawn_time': pygame.time.get_ticks()  # Momento en el que aparece
     }
 
 def update_stars():
-    """Actualiza la posición de las estrellas para crear un efecto de fondo en movimiento."""
+    # Actualiza la posición de las estrellas para crear un efecto de fondo en movimiento.
     for star in stars:
         star['y'] += star['speed']
         if star['y'] > SCREEN_HEIGHT:
@@ -111,20 +113,21 @@ def update_stars():
             star['x'] = random.randrange(0, SCREEN_WIDTH)
 
 def draw_stars():
-    """Dibuja las estrellas en el fondo."""
+    # Dibuja las estrellas en el fondo.
     for star in stars:
         pygame.draw.circle(screen, STAR_COLOR, (int(star['x']), int(star['y'])), star['r'])
 
 def reset_paddle_size(paddle, original_height=DEFAULT_PADDLE_HEIGHT):
-    """Reinicia el tamaño de la pala manteniendo su centro."""
+    # Reinicia el tamaño de la pala manteniendo su centro.
     center = paddle.centery
     paddle.height = original_height
     paddle.centery = center
 
 
 # INICIALIZACIÓN DEL JUEGO
+
 def init_game():
-    """Inicializa o reinicia los elementos del juego."""
+    # Inicializa o reinicia los elementos del juego.
     global balls, player, opponent, player_speed, opponent_speed, player_score, opponent_score
     global player_enlarged_until, opponent_enlarged_until, powerup, powerup_next_spawn
     balls = [create_ball()]  # Se inicia con una bola
@@ -146,6 +149,7 @@ init_game()
 
 
 # BUCLE PRINCIPAL DEL JUEGO
+
 while True:
     current_time = pygame.time.get_ticks()  # Tiempo actual para gestionar eventos temporales
 
@@ -221,6 +225,7 @@ while True:
     elif state == 'game':
 
         # GESTIÓN DE POWER-UP
+
         if powerup is None and current_time >= powerup_next_spawn:
             powerup = spawn_powerup()
         # Si el powerup ha estado en pantalla más de 5 segundos sin ser recogido, desaparece
@@ -266,15 +271,12 @@ while True:
 
             # COLISIÓN CON POWER-UP (la bola no lo recoge, sino que la pala sí)
 
-            # Si hay powerup activo, comprobamos colisión con cada pala
             if powerup is not None:
                 if ball['rect'].colliderect(powerup['rect']):
                     # Si la bola toca el powerup, se asigna el efecto según la dirección de la bola
-                    # (Se asume que la bola se acerca a la pala que debe recogerlo)
                     if ball['speed_x'] > 0:
                         # La bola se dirige a la pala del jugador (derecha)
                         player_enlarged_until = current_time + 5000  # 5 segundos de efecto
-                        # Aumentar la altura de la pala manteniendo el centro
                         center = player.centery
                         player.height = ENLARGED_PADDLE_HEIGHT
                         player.centery = center
@@ -292,21 +294,18 @@ while True:
         # ACTUALIZACIÓN DE PALAS
 
         player.y += player_speed
-        # Limitar el movimiento de la pala del jugador
         if player.top < 0:
             player.top = 0
         if player.bottom > SCREEN_HEIGHT:
             player.bottom = SCREEN_HEIGHT
 
-        # Movimiento del oponente: según el tipo seleccionado
+        # Movimiento del oponente según el tipo seleccionado
         if opponent_type == 'IA':
-            # La IA sigue la posición de la primera bola
             if opponent.centery < balls[0]['rect'].centery:
                 opponent.y += opponent_speed
             if opponent.centery > balls[0]['rect'].centery:
                 opponent.y -= opponent_speed
         else:
-            # Control manual para el oponente (jugador 2): teclas W y S
             keys = pygame.key.get_pressed()
             if keys[pygame.K_w]:
                 opponent.y -= opponent_speed
@@ -322,7 +321,6 @@ while True:
         # GESTIÓN DE MULTIBOLAS
 
         total_points = player_score + opponent_score
-        # Se añade una bola extra cada 10 puntos totales
         if total_points // 10 + 1 > len(balls):
             balls.append(create_ball())
 
@@ -339,30 +337,22 @@ while True:
 
         screen.fill(BG_COLOR)
         draw_stars()
-        # Dibujar palas
         pygame.draw.rect(screen, RED, player)
         pygame.draw.rect(screen, RED, opponent)
-        # Dibujar bolas
         for ball in balls:
             pygame.draw.ellipse(screen, YELLOW, ball['rect'])
-        # Dibujar línea central
         pygame.draw.aaline(screen, LIGHT_GREY, (SCREEN_WIDTH / 2, 0), (SCREEN_WIDTH / 2, SCREEN_HEIGHT))
-        # Dibujar marcador
         score_text = font_medium.render(f"{opponent_score}  -  {player_score}", True, LIGHT_GREY)
-        score_rect = score_text.get_rect(center=(SCREEN_WIDTH / 2, 30))
+        score_rect = score_text.get_rect(center=(SCREEN_WIDTH // 2, 30))
         screen.blit(score_text, score_rect)
-        # Dibujar power-up (si está activo)
+        # Dibujar power-up como círculo
         if powerup is not None:
-            pygame.draw.rect(screen, GREEN, powerup['rect'])
+            pygame.draw.ellipse(screen, GREEN, powerup['rect'])
 
-
-        # COMPROBACIÓN DEL LÍMITE DE PUNTOS
-        
         if player_score >= POINTS_LIMIT or opponent_score >= POINTS_LIMIT:
             state = 'game_over'
 
     elif state == 'game_over':
-        # Pantalla final con resultado y botón de salida
         screen.fill(BG_COLOR)
         draw_stars()
         if player_score > opponent_score:
