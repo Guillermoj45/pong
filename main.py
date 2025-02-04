@@ -20,7 +20,7 @@ font_medium = pygame.font.Font(None, 50)
 # 'menu': menú principal,
 # 'select': selección del tipo de oponente,
 # 'game': partida en juego,
-# 'game_over': tiempo terminado y resultado mostrado
+# 'game_over': partida finalizada por alcanzar el límite de puntos
 state = 'menu'
 opponent_type = 'IA'  # Valor por defecto
 
@@ -35,10 +35,8 @@ btn_player = pygame.Rect(screen_width // 2 - 150, screen_height // 2 + 20, 300, 
 # Botón para salir en la pantalla de Game Over
 btn_exit_game = pygame.Rect(screen_width // 2 - 150, screen_height // 2 + 80, 300, 60)
 
-# Variable para almacenar el tiempo de inicio de la partida (en milisegundos)
-game_start_time = None
-# Duración de la partida: 5 minutos = 300000 ms
-game_duration = 300000
+# Límite de puntos para finalizar la partida
+points_limit = 100
 
 # Función para dibujar un botón
 def draw_button(rect, text):
@@ -57,16 +55,14 @@ def create_ball():
 
 # Función de inicialización del juego
 def init_game():
-    global balls, player, opponent, player_speed, opponent_speed, player_score, opponent_score, game_start_time
+    global balls, player, opponent, player_speed, opponent_speed, player_score, opponent_score
     balls = [create_ball()]  # Se inicia con una bola
     player = pygame.Rect(screen_width - 20, screen_height / 2 - 70, 10, 140)
     opponent = pygame.Rect(10, screen_height / 2 - 70, 10, 140)  # Pala del oponente
     player_speed = 0  # Velocidad del jugador (lado derecho)
-    opponent_speed = 7
+    opponent_speed = 7  # Velocidad inicial de la IA (oponente)
     player_score = 0  # Puntuación del jugador (lado derecho)
     opponent_score = 0  # Puntuación del oponente (lado izquierdo)
-    # Se marca el tiempo de inicio de la partida
-    game_start_time = pygame.time.get_ticks()
 
 # Inicialización de variables de juego
 init_game()
@@ -137,90 +133,86 @@ while True:
         draw_button(btn_player, "Jugador")
 
     elif state == 'game':
-        # Verificar si el tiempo de partida ha finalizado
-        current_time = pygame.time.get_ticks()
-        elapsed_time = current_time - game_start_time
-        if elapsed_time >= game_duration:
+        # Actualización de la lógica del juego Pong para cada bola
+        for ball in balls:
+            ball['rect'].x += ball['speed_x']
+            ball['rect'].y += ball['speed_y']
+
+            # Colisión con la parte superior e inferior
+            if ball['rect'].top <= 0 or ball['rect'].bottom >= screen_height:
+                ball['speed_y'] *= -1
+
+            # Colisión con los bordes izquierdo y derecho y actualización de puntuación
+            if ball['rect'].left <= 0 or ball['rect'].right >= screen_width:
+                if ball['rect'].left <= 0:
+                    # La bola tocó la pared enemiga (lado izquierdo): punto para el jugador (lado derecho)
+                    player_score += 1
+                    # Si se juega contra IA, se incrementa su velocidad
+                    if opponent_type == 'IA':
+                        opponent_speed += 0.5
+                if ball['rect'].right >= screen_width:
+                    # La bola tocó la pared del jugador: punto para el oponente (lado izquierdo)
+                    opponent_score += 1
+                    if opponent_type == 'IA':
+                        opponent_speed += 0.5
+
+                # Reiniciar la bola en el centro con nuevas direcciones aleatorias
+                ball['rect'].center = (screen_width / 2, screen_height / 2)
+                ball['speed_x'] = 7 * random.choice((1, -1))
+                ball['speed_y'] = 7 * random.choice((1, -1))
+
+            # Colisiones con las palas:
+            # Si la bola colisiona con la pala del jugador (lado derecho), se asegura que se mueva hacia la izquierda.
+            if ball['rect'].colliderect(player):
+                ball['speed_x'] = -abs(ball['speed_x'])
+            # Si la bola colisiona con la pala del oponente (lado izquierdo), se asegura que se mueva hacia la derecha.
+            if ball['rect'].colliderect(opponent):
+                ball['speed_x'] = abs(ball['speed_x'])
+
+        # Actualización del jugador y del oponente
+        player.y += player_speed
+        if player.top < 0:
+            player.top = 0
+        if player.bottom > screen_height:
+            player.bottom = screen_height
+
+        # Movimiento del oponente según el tipo seleccionado
+        if opponent_type == 'IA':
+            if opponent.top < balls[0]['rect'].y:
+                opponent.top += opponent_speed
+            if opponent.bottom > balls[0]['rect'].y:
+                opponent.bottom -= opponent_speed
+        else:  # Control manual para el jugador oponente
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_w]:
+                opponent.y -= opponent_speed
+            if keys[pygame.K_s]:
+                opponent.y += opponent_speed
+        if opponent.top < 0:
+            opponent.top = 0
+        if opponent.bottom > screen_height:
+            opponent.bottom = screen_height
+
+        # Comprobación para añadir una bola extra cada 10 puntos totales
+        total_points = player_score + opponent_score
+        if total_points // 10 + 1 > len(balls):
+            balls.append(create_ball())
+
+        # Dibujo de elementos en pantalla
+        screen.fill(bg_color)
+        pygame.draw.rect(screen, light_grey, player)
+        pygame.draw.rect(screen, light_grey, opponent)
+        for ball in balls:
+            pygame.draw.ellipse(screen, light_grey, ball['rect'])
+        pygame.draw.aaline(screen, light_grey, (screen_width / 2, 0),
+                           (screen_width / 2, screen_height))
+        score_text = font_medium.render(f"{opponent_score}  -  {player_score}", True, light_grey)
+        score_rect = score_text.get_rect(center=(screen_width / 2, 30))
+        screen.blit(score_text, score_rect)
+
+        # Comprobación del límite de puntos: si algún jugador alcanza 100 puntos se finaliza la partida
+        if player_score >= points_limit or opponent_score >= points_limit:
             state = 'game_over'
-        else:
-            # Actualización de la lógica del juego Pong para cada bola
-            for ball in balls:
-                ball['rect'].x += ball['speed_x']
-                ball['rect'].y += ball['speed_y']
-
-                # Colisión con la parte superior e inferior
-                if ball['rect'].top <= 0 or ball['rect'].bottom >= screen_height:
-                    ball['speed_y'] *= -1
-
-                # Colisión con los bordes izquierdo y derecho y actualización de puntuación
-                if ball['rect'].left <= 0 or ball['rect'].right >= screen_width:
-                    if ball['rect'].left <= 0:
-                        # La bola tocó la pared enemiga (lado izquierdo): punto para el jugador (lado derecho)
-                        player_score += 1
-                    if ball['rect'].right >= screen_width:
-                        # La bola tocó la pared del jugador: punto para el oponente (lado izquierdo)
-                        opponent_score += 1
-
-                    # Reiniciar la bola en el centro con nuevas direcciones aleatorias
-                    ball['rect'].center = (screen_width / 2, screen_height / 2)
-                    ball['speed_x'] = 7 * random.choice((1, -1))
-                    ball['speed_y'] = 7 * random.choice((1, -1))
-
-                # Colisiones con las palas:
-                # Si la bola colisiona con la pala del jugador (lado derecho), se asegura que se mueva hacia la izquierda.
-                if ball['rect'].colliderect(player):
-                    ball['speed_x'] = -abs(ball['speed_x'])
-                # Si la bola colisiona con la pala del oponente (lado izquierdo), se asegura que se mueva hacia la derecha.
-                if ball['rect'].colliderect(opponent):
-                    ball['speed_x'] = abs(ball['speed_x'])
-
-            # Actualización del jugador y del oponente
-            player.y += player_speed
-            if player.top < 0:
-                player.top = 0
-            if player.bottom > screen_height:
-                player.bottom = screen_height
-
-            # Movimiento del oponente según el tipo seleccionado
-            if opponent_type == 'IA':
-                if opponent.top < balls[0]['rect'].y:
-                    opponent.top += opponent_speed
-                if opponent.bottom > balls[0]['rect'].y:
-                    opponent.bottom -= opponent_speed
-            else:  # Control manual para el jugador oponente
-                keys = pygame.key.get_pressed()
-                if keys[pygame.K_w]:
-                    opponent.y -= opponent_speed
-                if keys[pygame.K_s]:
-                    opponent.y += opponent_speed
-            if opponent.top < 0:
-                opponent.top = 0
-            if opponent.bottom > screen_height:
-                opponent.bottom = screen_height
-
-            # Comprobación para añadir una bola extra cada 10 puntos totales
-            total_points = player_score + opponent_score
-            if total_points // 10 + 1 > len(balls):
-                balls.append(create_ball())
-
-            # Dibujo de elementos en pantalla
-            screen.fill(bg_color)
-            pygame.draw.rect(screen, light_grey, player)
-            pygame.draw.rect(screen, light_grey, opponent)
-            for ball in balls:
-                pygame.draw.ellipse(screen, light_grey, ball['rect'])
-            pygame.draw.aaline(screen, light_grey, (screen_width / 2, 0), (screen_width / 2, screen_height))
-            score_text = font_medium.render(f"{opponent_score}  -  {player_score}", True, light_grey)
-            score_rect = score_text.get_rect(center=(screen_width / 2, 30))
-            screen.blit(score_text, score_rect)
-
-            # Se muestra el tiempo restante en la esquina superior derecha
-            remaining_time = max(0, game_duration - elapsed_time)
-            minutes = remaining_time // 60000
-            seconds = (remaining_time % 60000) // 1000
-            timer_text = font_medium.render(f"{minutes:02}:{seconds:02}", True, light_grey)
-            timer_rect = timer_text.get_rect(topright=(screen_width - 20, 20))
-            screen.blit(timer_text, timer_rect)
 
     elif state == 'game_over':
         # Pantalla final: se muestra el resultado y un botón de salida
