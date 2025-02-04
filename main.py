@@ -16,14 +16,14 @@ light_grey = (200, 200, 200)
 font_large = pygame.font.Font(None, 74)
 font_medium = pygame.font.Font(None, 50)
 
-# Estados del juego
+# Estados del juego:
 # 'menu': menú principal, 'select': selección del tipo de oponente, 'game': partida en juego
 state = 'menu'
 opponent_type = 'IA'  # Valor por defecto
 
 # Botones en el menú principal
-# Se definen rectángulos para detectar los clics
-btn_select = pygame.Rect(screen_width // 2 - 150, screen_height // 2 - 100, 300, 60)
+# Se han incrementado las dimensiones del botón "Seleccionar Oponente" para que el texto se visualice por completo.
+btn_select = pygame.Rect(screen_width // 2 - 200, screen_height // 2 - 100, 400, 80)
 btn_exit = pygame.Rect(screen_width // 2 - 150, screen_height // 2 + 20, 300, 60)
 
 # Botones en la pantalla de selección de oponente
@@ -105,7 +105,7 @@ while True:
         title_rect = title_surface.get_rect(center=(screen_width // 2, screen_height // 4))
         screen.blit(title_surface, title_rect)
 
-        # Botón para seleccionar el tipo de oponente (se ubica en la parte superior, según se indica)
+        # Botón para seleccionar el tipo de oponente (ahora con mayor tamaño)
         draw_button(btn_select, "Seleccionar Oponente")
         # Botón para salir de la aplicación
         draw_button(btn_exit, "Salir")
